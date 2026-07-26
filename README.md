@@ -1,146 +1,71 @@
-# Ebook Converter Pipeline
+[PUBLIC-READY]
 
-多格式電子書轉 Markdown 轉換器，支援 LLM 智能轉換與知識庫索引。
+# 电子书转 Markdown 流水线 / Ebook-to-Markdown Pipeline
 
-## 快速開始 (Quick Start)
+多格式电子书批量转 Markdown 的个人工具链，LLM 智能转换 + 知识库索引，已实跑转换 5,153 份文档。
+A personal batch pipeline that converts ebooks into Markdown using LLM-assisted parsing, with knowledge-base indexing — has processed 5,153 real documents in production use.
+
+## 技术栈 / Stack
+
+Python 3 + `requirements.txt`：`google-generativeai`、`PyPDF2`、`ebooklib`、`python-docx`、`beautifulsoup4`、`pymupdf`、`pdf2image` + `pytesseract`（OCR）、`boto3`/`bypy`（S3/百度网盘）。容器化：`Dockerfile` + `docker-compose.yml`。持久化：MongoDB。
+
+Python 3 with the deps above; containerized via Docker Compose; MongoDB for persistence; LLM backends are X.AI Grok-3 (primary) with Gemini 2.0 Flash as fallback (`llm_converter.py`).
+
+## 功能 / Features
+
+- **格式支持**：PDF（文字提取 + 中英文 OCR）、EPUB/MOBI、TXT、DOCX、HTML（`ebook_extractor.py`）
+- **LLM 转换**：X.AI Grok-3 → Gemini 2.0 Flash 自动降级，智能识别标题/段落/列表结构（`llm_converter.py`）
+- **批量流水线**：多来源（百度网盘、Google Drive、本地目录），并行处理，断点续传（`pipeline_processor.py`、`multi_source_processor.py`、`parallel_processor.py`/`ultra_parallel_processor.py`）
+- **知识索引**：维特根斯坦式命题结构提取，概念与关系映射，JSON 输出（`wittgenstein_indexer.py`）
+- **存储后端**：MongoDB 持久化（`mongodb_handler.py`）+ S3/GCS 上传（`s3_uploader.py`）
+- 另有大量辅助脚本：质量审计（`audit_quality.py`）、去重（`dedup_processor.py`）、书签抓取转换（`bookmark_converter.py`）、监控面板（`monitor_dashboard.py`）等
+
+---
+
+- **Formats**: PDF (text extraction + CN/EN OCR), EPUB/MOBI, TXT, DOCX, HTML (`ebook_extractor.py`)
+- **LLM conversion**: X.AI Grok-3 with automatic fallback to Gemini 2.0 Flash; structure-aware heading/paragraph/list detection (`llm_converter.py`)
+- **Batch pipeline**: multi-source (Baidu Netdisk, Google Drive, local), parallel workers, resumable (`pipeline_processor.py`, `multi_source_processor.py`, `parallel_processor.py`/`ultra_parallel_processor.py`)
+- **Knowledge indexing**: Wittgenstein-style proposition extraction, concept/relation mapping, JSON output (`wittgenstein_indexer.py`)
+- **Storage**: MongoDB persistence (`mongodb_handler.py`) + S3/GCS upload (`s3_uploader.py`)
+- Plus a large set of utility scripts: quality audit (`audit_quality.py`), dedup (`dedup_processor.py`), bookmark scraping (`bookmark_converter.py`), monitoring dashboard (`monitor_dashboard.py`), and more
+
+## 本地运行 / Getting started
 
 ```bash
-# 1. 克隆倉庫
-git clone https://github.com/web3-ai-game/ebook-converter.git
-cd ebook-converter
-
-# 2. 安裝依賴
 pip install -r requirements.txt
 
-# 3. 配置環境變量
-cp .env.example .env
-# 編輯 .env 填入你的 API keys
+# OCR 支持（可选）/ optional OCR support
+apt-get install tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-chi-tra poppler-utils
 
-# 4. 運行轉換
+cp .env.example .env   # 填入真实值 / fill in real values
+
 python main.py /path/to/your/ebook.pdf
 ```
 
-## 環境變量 (.env)
-
+Docker 部署 / Docker deployment:
 ```bash
-# LLM API (選擇一個)
-XAI_API_KEY=your_xai_key          # X.AI Grok (推薦)
-GEMINI_API_KEY=your_gemini_key    # Google Gemini
-
-# MongoDB (可選，用於持久化)
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/
-
-# S3/GCS 存儲 (可選)
-AWS_ACCESS_KEY_ID=your_key
-AWS_SECRET_ACCESS_KEY=your_secret
-S3_BUCKET=your-bucket
-S3_ENDPOINT_URL=https://storage.googleapis.com  # GCS 用這個
-```
-
-## 支援格式
-
-| 格式 | 說明 |
-|------|------|
-| PDF | 文字提取 + OCR (中英文) |
-| EPUB/MOBI | 完整章節提取 |
-| TXT | 純文本處理 |
-| DOCX | Word 文檔 |
-| HTML | 網頁內容 |
-
-## 項目結構
-
-```
-ebook-converter/
-├── main.py                    # 主入口
-├── config.py                  # 配置文件
-├── llm_converter.py           # LLM 轉換核心 (X.AI/Gemini)
-├── ebook_extractor.py         # 電子書文本提取
-├── mongodb_handler.py         # MongoDB 持久化
-├── s3_uploader.py             # S3/GCS 上傳
-├── wittgenstein_indexer.py    # 知識索引生成
-├── data/
-│   ├── markdown-output/       # 轉換後的 MD 文件 (5,153 個)
-│   └── wittgenstein-index/    # 知識庫索引
-└── requirements.txt
-```
-
-## 核心模組
-
-### 1. LLM 轉換 (`llm_converter.py`)
-- 支援 X.AI Grok-3 和 Google Gemini
-- 智能識別標題、段落、列表結構
-- 自動分塊處理長文本
-
-### 2. 批量處理 (`pipeline_processor.py`)
-- 多源支援：百度網盤、Google Drive、本地
-- 並行處理 (50 workers)
-- 斷點續傳
-
-### 3. 知識索引 (`wittgenstein_indexer.py`)
-- 維根斯坦式命題結構
-- 概念提取與關係映射
-- JSON 格式輸出
-
-## 使用示例
-
-### 單文件轉換
-```python
-from main import EbookConverterPipeline
-
-pipeline = EbookConverterPipeline()
-result = pipeline.process_single_file('/path/to/book.pdf')
-print(result['markdown_path'])
-```
-
-### 批量處理
-```python
-from pipeline_processor import PipelineProcessor
-
-processor = PipelineProcessor()
-processor.process_directory('/path/to/books', workers=10)
-```
-
-### 百度網盤處理
-```bash
-python run_pipeline.py
-# 按提示登錄百度網盤並選擇目錄
-```
-
-## 當前狀態 (Dec 2025)
-
-| 指標 | 數值 |
-|------|------|
-| 已轉換文檔 | 5,153 個 |
-| Markdown 總大小 | 3.8 GB |
-| 支援 LLM | X.AI Grok-3, Gemini 2.0 Flash |
-| 存儲後端 | MongoDB + GCS |
-
-## 依賴安裝
-
-```bash
-# 基礎依賴
-pip install -r requirements.txt
-
-# OCR 支援 (可選)
-apt-get install tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-chi-tra
-
-# PDF 處理
-apt-get install poppler-utils
-```
-
-## Docker 部署
-
-```bash
-docker-compose up -d
+docker compose up -d
 docker exec -it ebook-converter bash
 ```
 
-## 詳細文檔
+## 环境变量 / Env
 
-- [中文使用指南](README_ZH.md)
-- [快速入門](QUICKSTART_ZH.md)
-- [詳細用法](USAGE_ZH.md)
+来自 `.env.example`，值均为占位符，真实值由 Doppler 注入：
+Keys below are from `.env.example`; all values are placeholders — real values are injected via Doppler.
 
-## License
+```
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+GEMINI_API_KEY=
+GEMINI_API_KEY_1=
+GEMINI_API_KEY_2=
+GEMINI_API_KEY_3=
+XAI_API_KEY_1=
+XAI_API_KEY_2=
+MONGODB_URI=
+```
 
-MIT
+## 完成度 / Status
+
+能跑 — 个人生产工具，已处理 5,153 份文档、约 3.8GB Markdown 输出；脚本较多且部分为一次性/调试用途，尚未整理成规范化的公开工具包结构。
+Working — a personal production tool that has processed 5,153 documents (~3.8GB of Markdown output); the script collection is large and includes one-off/debug utilities not yet organized into a clean public-package layout.
