@@ -28,7 +28,7 @@ cp .env.example .env
 python3 main.py
 ```
 
-`.env` 只留在本機。路徑用相對目錄 `./data`，不要把家目錄寫進程式。
+`.env` 只留在本機。路徑用相對目錄 `./data`，不要把家目錄寫進程式。PDF 文字由 PyMuPDF 提取。公開依賴下限已對齊目前的安全版本。
 
 <a id="en"></a>
 
@@ -56,7 +56,7 @@ cp .env.example .env
 python3 main.py
 ```
 
-Keep `.env` on the machine. Paths stay under `./data`. Do not hard-code a home directory.
+Keep `.env` on the machine. Paths stay under `./data`. Do not hard-code a home directory. PDF text comes from PyMuPDF. Public dependency floors match the current patched releases.
 
 ## License
 

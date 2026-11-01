@@ -3,7 +3,6 @@ import os
 import logging
 from pathlib import Path
 from typing import List, Dict, Optional
-import PyPDF2
 import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup
